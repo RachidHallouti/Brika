@@ -1,17 +1,28 @@
 
 "use client";
 
-import { memo, Suspense } from "react";
+import { memo, Suspense, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import Experiance from "./components/Experiance";
 import { useBrikaStore } from "./store/useBrikaStore";
+import { useMediaQuery } from "react-responsive";
+import {motion} from "motion/react";
+import { ArrowUp, Settings2 } from "lucide-react";
 
 const COLORS = [
-  { name: "Ocean", value: "#2563eb" },
-  { name: "Obsidian", value: "#5e5c64" },
-  { name: "Flame", value: "#e01b24" },
-  { name: "Forest", value: "#26a269" },
-  { name: "Pearl", value: "#c0bfbc" },
+    { name: "Cobalt", value: "#2563eb" },
+  { name: "Graphite", value: "#5e5c64" },
+  { name: "Vermilion", value: "#E6533D" },
+   { name: "Emerald", value: "#26a269" },
+   { name: "Silver", value: "#c0bfbc" },
+];
+
+const ACCENTCOLORS = [
+  { name: "Steel", value: "#AEBAC3" },
+  { name: "Jet Black", value: "#121619" },
+  { name: "Copper", value: "#B76E4B" },
+  { name: "Champagne", value: "#D4B483" },
+  { name: "Ivory", value: "#F4EBDD" },
 ];
 
 const BrikaScene = memo(function BrikaScene() {
@@ -42,14 +53,20 @@ const BrikaScene = memo(function BrikaScene() {
 function CustomizationPanel() {
   const color = useBrikaStore((s) => s.color);
   const setColor = useBrikaStore((s) => s.setColor);
+  const accentColor = useBrikaStore((s) => s.accentColor);
+  const setAccentColor = useBrikaStore((s) => s.setAccentColor);
+  const isMobile = useMediaQuery({maxWidth: 1024});
+  const [isOpen, setIsOpen] = useState(false);
+
 
   return (
-    <aside
+    <motion.aside
+    animate={{bottom: isOpen ? 0 : -112}}
       className="
         pointer-events-auto
         fixed
         lg:static 
-        bottom-0 left-4 right-4 z-20
+         left-4 right-4 z-20
         rounded-t-[20px]
         lg:rounded-[28px]
         border border-white/80
@@ -64,27 +81,18 @@ function CustomizationPanel() {
     >
       <div className="mb-6 flex items-center justify-between">
           
-
           <h2 style={{color}} className="text-xl font-semibold tracking-tight ">
             Customize Brika
           </h2>
 
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-black/5">
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M4 7h16M4 17h16" />
-            <circle cx="9" cy="7" r="3" fill="#f8fafc" />
-            <circle cx="16" cy="17" r="3" fill="#f8fafc" />
-          </svg>
+          {isMobile ? ( <button onClick={() => setIsOpen(!isOpen)}>
+{!isOpen ? (
+            <ArrowUp className="h-4 w-4 text-black/50" />):(<ArrowUp className="h-4 w-4 text-black/50 rotate-180" />)
+           }
+          </button> ): (
+            <Settings2 className="h-4 w-4 text-black/50" />
+          )}
         </div>
       </div>
 
@@ -93,9 +101,9 @@ function CustomizationPanel() {
       <div className="pt-5">
         <div className="mb-4 flex items-center justify-between">
           <label className="text-xs font-semibold text-neutral-700">
-            Case finish
+            Color
           </label>
-          <div className="flex items-center font-mono text-[11px] uppercase tracking-wider text-neutral-500">
+          <div className="flex items-center  text-[11px] uppercase tracking-wider text-neutral-500">
   <span>#</span>
 
   <input
@@ -165,14 +173,91 @@ function CustomizationPanel() {
           </label>
         </div>
       </div>
-    </aside>
+      <div className="h-px mt-6 bg-black/10" />
+
+      <div className="pt-5">
+        <div className="mb-4 flex items-center justify-between">
+          <label className="text-xs font-semibold text-neutral-700">
+            Accent Color
+          </label>
+          <div className="flex items-center  text-[11px] uppercase tracking-wider text-neutral-500">
+  <span>#</span>
+
+  <input
+    value={accentColor.slice(1)}
+    maxLength={6}
+    className="w-14 bg-transparent text-right uppercase outline-none"
+    onChange={(e) => {
+      setAccentColor(`#${e.target.value}`);
+    }}
+  />
+</div>
+           
+        </div>
+
+        <div className="flex items-center gap-3">
+          {ACCENTCOLORS.map((swatch) => {
+            const active =
+              accentColor.toLowerCase() ===
+              swatch.value.toLowerCase();
+
+            return (
+              <button
+                key={swatch.value}
+                type="button"
+                title={swatch.name}
+                aria-label={swatch.name}
+                aria-pressed={active}
+                onClick={() => setAccentColor(swatch.value)}
+                className={`
+                  cursor-pointer
+                  relative h-9 w-9 shrink-0
+                  rounded-full border border-black/10
+                  transition-all duration-200
+                  hover:scale-110
+                  ${
+                    active
+                      ? "ring-2 ring-[#ff633e] ring-offset-[3px]"
+                      : ""
+                  }
+                `}
+                style={{
+                  backgroundColor: swatch.value,
+                }}
+              />
+            );
+          })}
+
+          <label
+            className="
+              relative flex h-9 w-9 shrink-0
+              cursor-pointer items-center justify-center
+              rounded-full border border-dashed
+              border-neutral-400
+              text-lg text-neutral-600
+              transition hover:border-black hover:bg-black/5
+            "
+            title="Choose custom color"
+          >
+            <span aria-hidden="true">+</span>
+            <input
+              type="color"
+              aria-label="Choose custom case color"
+              value={accentColor}
+              onChange={(e) => setAccentColor(e.target.value)}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            />
+          </label>
+        </div>
+      </div>
+    </motion.aside>
   );
 }
 
 export default function Home() {
   const color = useBrikaStore((s) => s.color);
   return (
-    <main className="relative isolate h-[100svh] overflow-hidden bg-[#e9ecef] font-sans text-[#202327] selection:bg-[#ff633e]/20">
+    <main className="relative font-space   isolate h-[100svh] overflow-hidden bg-[#e9ecef]  text-[#202327] select-none">
       <div
         className="
           pointer-events-none absolute inset-0
@@ -205,24 +290,24 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="relative flex h-2 w-2">
-            <span style={{ backgroundColor: color }} className="relative inline-flex h-2 w-2 rounded-full" />
-          </span>
+          
 
-          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-600">
+          <motion.a whileHover={{ color }} className="text-base pointer-events-auto font-semibold uppercase tracking-[0.16em] text-neutral-600" href="https://rochdi.dev" target="_blank" rel="noopener noreferrer">
             By Rochdi.dev
-          </span>
+          </motion.a>
         </div>
       </header>
 
       <section
         className="
-          pointer-events-none p-10 absolute w-full flex justify-between top-18 z-10
+           p-10 absolute w-full flex justify-between top-18 z-10
           lg:top-[23%]
+          pointer-events-none
         "
       >
         <div className="max-w-[350px]
           md:left-12 
+          hidden lg:block
           lg:max-w-[540px]">
         <h1
           className="
@@ -231,12 +316,13 @@ export default function Home() {
           leading-[0.98]
           tracking-[-0.075em]
           text-[#202327]
+          
           "
           >
           Developped By
-          <span className="block" style={{ color }}>
+          <motion.a whileHover={{ opacity: 0.7 }}  className="block pointer-events-auto" style={{ color }} href="https://rochdi.dev" target="_blank" rel="noopener noreferrer">
             Rachid Hallouti
-          </span>
+          </motion.a>
         </h1>
           </div>
       <CustomizationPanel />

@@ -14,6 +14,7 @@ import { useBrikaStore } from "../store/useBrikaStore";
 
 export default function Experience() {
   const color = useBrikaStore((state) => state.color);
+  const accentColor = useBrikaStore((state) => state.accentColor);
 
   return (
     
@@ -76,6 +77,7 @@ export default function Experience() {
           rotation-y={-Math.PI / 2}
           position-y={-0.5}
           color={color}
+          accentColor={accentColor}
         />
       </Float>
       </ScrollControls>

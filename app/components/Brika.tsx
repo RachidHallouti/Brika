@@ -3,11 +3,9 @@
 
 import * as THREE from "three";
 import { JSX, useEffect, useMemo, useRef } from "react";
-import { useGLTF,Billboard ,useScroll, useVideoTexture, Text} from "@react-three/drei";
-import { useFrame,useLoader } from "@react-three/fiber";
+import { useGLTF,Billboard ,useScroll, useVideoTexture} from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
 import { GLTF } from "three-stdlib";
-import gsap from "gsap";
-import { useBrikaStore } from "../store/useBrikaStore";
 
 type GLTFResult = GLTF & {
   nodes: {
@@ -41,7 +39,10 @@ type BrikaProps = Omit<
   "color"
 > & {
   color?: THREE.ColorRepresentation;
-};
+} & {
+  accentColor?: THREE.ColorRepresentation;
+
+}
 
 const MODEL_URL = "/models/brika_lp.glb";
 
@@ -90,6 +91,7 @@ function Flame() {
 
 export function Brika({
   color = "#2563eb",
+  accentColor = "#000",
   ...props
 }: BrikaProps) {
   const { nodes, materials } = useGLTF(
@@ -184,6 +186,7 @@ useFrame(() => {
         <mesh
           geometry={nodes.button_Baked.geometry}
           material={materials.button_Baked}
+          material-color={accentColor}
         />
       </group>
 
@@ -206,12 +209,16 @@ useFrame(() => {
       <mesh
         geometry={nodes.pac_Baked.geometry}
         material={materials.pac_Baked}
+          material-color={accentColor}
+
         position={[0, 0.036, -0.013]}
       />
 
       <mesh
         geometry={nodes.plastic_top_Baked.geometry}
         material={materials["plastic top_Baked"]}
+          material-color={accentColor}
+
         position={[0, 0.03, 0]}
       />
 
