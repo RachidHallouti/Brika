@@ -1,7 +1,7 @@
 
 "use client";
 
-import { memo, Suspense, useState } from "react";
+import { memo, Suspense, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import Experiance from "./components/Experiance";
 import { useBrikaStore } from "./store/useBrikaStore";
@@ -26,11 +26,13 @@ const ACCENTCOLORS = [
 ];
 
 const BrikaScene = memo(function BrikaScene() {
+  const isMobile = useMediaQuery({maxWidth: 1024});
+
   return (
     <div className="absolute inset-0 z-0">
       <Canvas
         camera={{
-          position: [0, 0, 12],
+          position: [0, 0, isMobile?13.5:12],
           fov: 35,
           near: 0.1,
           far: 100,
@@ -55,15 +57,53 @@ function CustomizationPanel() {
   const setColor = useBrikaStore((s) => s.setColor);
   const accentColor = useBrikaStore((s) => s.accentColor);
   const setAccentColor = useBrikaStore((s) => s.setAccentColor);
-  const isMobile = useMediaQuery({maxWidth: 1024});
-  const [isOpen, setIsOpen] = useState(false);
+const mobile = useMediaQuery({ maxWidth: 1024 });
+const [mounted, setMounted] = useState(false);
+const [isOpen, setIsOpen] = useState(false);
+
+useEffect(() => {
+  setMounted(true);
+}, []);
+
+const isMobile = mounted && mobile;
+
+  const [hexP, setHexP] = useState(color.slice(1));
+  const [hexA, setHexA] = useState(accentColor.slice(1));
+
+useEffect(() => {
+  setHexP(color.slice(1));
+}, [color]);
+
+useEffect(() => {
+  setHexA(color.slice(1));
+}, [accentColor]);
+
+const handleHexChange = (value: string,hexSetter: Function,ColorSetter: Function) => {
+  const cleaned = value
+    .replace(/[^0-9a-f]/gi, "")
+    .slice(0, 6);
+
+  hexSetter(cleaned);
+
+  if (cleaned.length === 6) {
+    ColorSetter(`#${cleaned}`);
+  }
+};
 
 
   return (
     <motion.aside
-    animate={{bottom: isOpen ? 0 : -112}}
+    animate={{
+    y: isMobile && !isOpen ? "calc(100% - 82px)" : "0%",
+  }}
+  transition={{
+    type: "spring",
+    stiffness: 300,
+    damping: 32,
+  }}
       className="
         pointer-events-auto
+        bottom-0
         fixed
         lg:static 
          left-4 right-4 z-20
@@ -107,12 +147,12 @@ function CustomizationPanel() {
   <span>#</span>
 
   <input
-    value={color.slice(1)}
+    value={hexP}
     maxLength={6}
     className="w-14 bg-transparent text-right uppercase outline-none"
     onChange={(e) => {
-      setColor(`#${e.target.value}`);
-    }}
+      handleHexChange(e.target.value,setHexP,setColor)}
+    }
   />
 </div>
            
@@ -184,12 +224,12 @@ function CustomizationPanel() {
   <span>#</span>
 
   <input
-    value={accentColor.slice(1)}
+    value={hexA}
     maxLength={6}
     className="w-14 bg-transparent text-right uppercase outline-none"
     onChange={(e) => {
-      setAccentColor(`#${e.target.value}`);
-    }}
+      handleHexChange(e.target.value,setHexA,setAccentColor)}
+    }
   />
 </div>
            
