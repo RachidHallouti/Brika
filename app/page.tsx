@@ -1,191 +1,284 @@
 
 "use client";
 
+import { memo, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useEffect, useRef } from "react";
 import Experiance from "./components/Experiance";
 import { useBrikaStore } from "./store/useBrikaStore";
 
-export default function Home() {
+const COLORS = [
+  { name: "Ocean", value: "#2563eb" },
+  { name: "Obsidian", value: "#5e5c64" },
+  { name: "Flame", value: "#e01b24" },
+  { name: "Forest", value: "#26a269" },
+  { name: "Pearl", value: "#c0bfbc" },
+];
+
+const BrikaScene = memo(function BrikaScene() {
+  return (
+    <div className="absolute inset-0 z-0">
+      <Canvas
+        camera={{
+          position: [0, 0, 12],
+          fov: 35,
+          near: 0.1,
+          far: 100,
+        }}
+        dpr={[1, 1.75]}
+        gl={{
+          antialias: true,
+          alpha: true,
+          powerPreference: "high-performance",
+        }}
+      >
+        <Suspense fallback={null}>
+          <Experiance />
+        </Suspense>
+      </Canvas>
+    </div>
+  );
+});
+
+function CustomizationPanel() {
   const color = useBrikaStore((s) => s.color);
-  const fuel = useBrikaStore((s) => s.fuelLevel);
-  const isIgniting = useBrikaStore((s) => s.isIgniting);
-
   const setColor = useBrikaStore((s) => s.setColor);
-  const setFuelLevel = useBrikaStore(
-    (s) => s.setFuelLevel
-  );
-  const setIsIgniting = useBrikaStore(
-    (s) => s.setIsIgniting
-  );
-  const triggerIgnition = useBrikaStore(
-    (s) => s.triggerIgnition
-  );
-
-  const sceneRef = useRef<HTMLDivElement>(null);
-  const ignitionTimer = useRef<
-    ReturnType<typeof setTimeout> | null
-  >(null);
-  const lastIgnition = useRef(0);
-
-  useEffect(() => {
-    const element = sceneRef.current;
-    if (!element) return;
-
-    const handleWheel = (event: WheelEvent) => {
-      if (event.deltaY <= 0) return;
-
-      if (fuel <= 0) return;
-
-      event.preventDefault();
-
-      const now = performance.now();
-
-      // Avoid excessive ignition triggers
-      if (now - lastIgnition.current < 650) {
-        return;
-      }
-
-      lastIgnition.current = now;
-      triggerIgnition();
-
-      if (ignitionTimer.current) {
-        clearTimeout(ignitionTimer.current);
-      }
-
-      ignitionTimer.current = setTimeout(() => {
-        setIsIgniting(false);
-      }, 650);
-    };
-
-    element.addEventListener("wheel", handleWheel, {
-      passive: false,
-    });
-
-    return () => {
-      element.removeEventListener("wheel", handleWheel);
-
-      if (ignitionTimer.current) {
-        clearTimeout(ignitionTimer.current);
-      }
-    };
-  }, [fuel, triggerIgnition, setIsIgniting]);
 
   return (
-    <main className="relative min-h-[100svh] overflow-hidden bg-[#e9ecef]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#e9ecef_55%,#cbd5e1_100%)]" />
+    <aside
+      className="
+        pointer-events-auto
+        fixed
+        lg:static 
+        bottom-0 left-4 right-4 z-20
+        rounded-t-[20px]
+        lg:rounded-[28px]
+        border border-white/80
+        bg-white/75
+        p-5
+        shadow-[0_20px_60px_rgba(20,30,40,0.10)]
+        backdrop-blur-2xl
+        lg:right-auto lg:w-[320px]
+        lg:bottom-10 lg:left-12 md:p-6
+        h-fit
+      "
+    >
+      <div className="mb-6 flex items-center justify-between">
+          
 
-      {/* 3D scene */}
-      <div
-        ref={sceneRef}
-        className="absolute inset-0"
-      >
-        <Canvas
-          camera={{
-            position: [0, 0, 11],
-            fov: 35,
-            near: 0.1,
-            far: 100,
-          }}
-          dpr={[1, 1.75]}
-          gl={{
-            antialias: true,
-            alpha: true,
-            powerPreference: "high-performance",
-          }}
-        >
-          <Suspense fallback={null}>
-            <Experiance />
-          </Suspense>
-        </Canvas>
+          <h2 style={{color}} className="text-xl font-semibold tracking-tight ">
+            Customize Brika
+          </h2>
+
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-black/5">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 7h16M4 17h16" />
+            <circle cx="9" cy="7" r="3" fill="#f8fafc" />
+            <circle cx="16" cy="17" r="3" fill="#f8fafc" />
+          </svg>
+        </div>
       </div>
 
-      {/* Header */}
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between px-6 py-6 md:px-12">
-        <h1 className="text-xl font-black tracking-tight text-neutral-900">
-          BRIKA®
-        </h1>
+      <div className="h-px bg-black/10" />
 
-        <span className="text-xs font-medium tracking-widest text-neutral-500 uppercase">
-          Interactive lighter
-        </span>
+      <div className="pt-5">
+        <div className="mb-4 flex items-center justify-between">
+          <label className="text-xs font-semibold text-neutral-700">
+            Case finish
+          </label>
+          <div className="flex items-center font-mono text-[11px] uppercase tracking-wider text-neutral-500">
+  <span>#</span>
+
+  <input
+    value={color.slice(1)}
+    maxLength={6}
+    className="w-14 bg-transparent text-right uppercase outline-none"
+    onChange={(e) => {
+      setColor(`#${e.target.value}`);
+    }}
+  />
+</div>
+           
+        </div>
+
+        <div className="flex items-center gap-3">
+          {COLORS.map((swatch) => {
+            const active =
+              color.toLowerCase() ===
+              swatch.value.toLowerCase();
+
+            return (
+              <button
+                key={swatch.value}
+                type="button"
+                title={swatch.name}
+                aria-label={swatch.name}
+                aria-pressed={active}
+                onClick={() => setColor(swatch.value)}
+                className={`
+                  cursor-pointer
+                  relative h-9 w-9 shrink-0
+                  rounded-full border border-black/10
+                  transition-all duration-200
+                  hover:scale-110
+                  ${
+                    active
+                      ? "ring-2 ring-[#ff633e] ring-offset-[3px]"
+                      : ""
+                  }
+                `}
+                style={{
+                  backgroundColor: swatch.value,
+                }}
+              />
+            );
+          })}
+
+          <label
+            className="
+              relative flex h-9 w-9 shrink-0
+              cursor-pointer items-center justify-center
+              rounded-full border border-dashed
+              border-neutral-400
+              text-lg text-neutral-600
+              transition hover:border-black hover:bg-black/5
+            "
+            title="Choose custom color"
+          >
+            <span aria-hidden="true">+</span>
+            <input
+              type="color"
+              aria-label="Choose custom case color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            />
+          </label>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+export default function Home() {
+  const color = useBrikaStore((s) => s.color);
+  return (
+    <main className="relative isolate h-[100svh] overflow-hidden bg-[#e9ecef] font-sans text-[#202327] selection:bg-[#ff633e]/20">
+      <div
+        className="
+          pointer-events-none absolute inset-0
+          bg-[radial-gradient(ellipse_at_50%_42%,#ffffff_0%,#edf0f2_48%,#cdd3d9_100%)]
+        "
+      />
+
+      <div
+        className="
+          pointer-events-none absolute inset-0
+          opacity-[0.035]
+          [background-image:linear-gradient(#000_1px,transparent_1px),linear-gradient(90deg,#000_1px,transparent_1px)]
+          [background-size:72px_72px]
+        "
+      />
+
+      <BrikaScene />
+
+      <header
+        className="
+          pointer-events-none absolute inset-x-0 top-0 z-20
+          flex items-center justify-between
+          px-5 py-6
+          md:px-12 md:py-9
+        "
+      >
+        <div className="flex text-[26px] font-black tracking-[-0.09em] items-center gap-3">
+            BRIKA<span style={{ color }}>.</span>
+          
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="relative flex h-2 w-2">
+            <span style={{ backgroundColor: color }} className="relative inline-flex h-2 w-2 rounded-full" />
+          </span>
+
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-600">
+            By Rochdi.dev
+          </span>
+        </div>
       </header>
 
-      {/* Controls */}
-      <aside className="absolute right-4 bottom-5 left-4 z-20 rounded-3xl border border-white/70 bg-white/85 p-5 shadow-xl backdrop-blur-xl md:top-1/2 md:right-8 md:bottom-auto md:left-auto md:w-72 md:-translate-y-1/2">
-        <h2 className="mb-6 text-xl font-semibold text-neutral-900">
-          Customize Brika
-        </h2>
-
-        <div className="mb-6">
-          <label
-            htmlFor="brika-color"
-            className="mb-2 block text-sm font-medium text-neutral-700"
+      <section
+        className="
+          pointer-events-none p-10 absolute w-full flex justify-between top-18 z-10
+          lg:top-[23%]
+        "
+      >
+        <div className="max-w-[350px]
+          md:left-12 
+          lg:max-w-[540px]">
+        <h1
+          className="
+          text-[clamp(2.8rem,5.5vw,5.5rem)]
+          font-semibold
+          leading-[0.98]
+          tracking-[-0.075em]
+          text-[#202327]
+          "
           >
-            Case color
-          </label>
-
-          <input
-            id="brika-color"
-            type="color"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-            className="h-12 w-16 cursor-pointer"
-          />
-        </div>
-
-        <div className="mb-6">
-          <div className="mb-2 flex justify-between">
-            <label
-              htmlFor="brika-fuel"
-              className="text-sm font-medium text-neutral-700"
-            >
-              Fuel level
-            </label>
-
-            <span className="text-sm font-semibold text-neutral-900">
-              {fuel}%
-            </span>
+          Developped By
+          <span className="block" style={{ color }}>
+            Rachid Hallouti
+          </span>
+        </h1>
           </div>
+      <CustomizationPanel />
 
-          <input
-            id="brika-fuel"
-            type="range"
-            min="0"
-            max="100"
-            value={fuel}
-            onChange={(e) =>
-              setFuelLevel(Number(e.target.value))
-            }
-            className="w-full cursor-pointer accent-neutral-900"
-          />
+      </section>
+
+     
+
+
+      <div
+        className="
+          pointer-events-none absolute
+          bottom-20 right-1/2 z-10 translate-x-1/2
+          hidden items-center gap-5 lg:flex
+        "
+      >
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#202327]">
+            Scroll Down
+          </span>
+
+          
         </div>
 
-        <button
-          type="button"
-          onPointerDown={(e) => {
-            if (fuel <= 0) return;
-
-            e.currentTarget.setPointerCapture(e.pointerId);
-            triggerIgnition();
-          }}
-          onPointerUp={() => setIsIgniting(false)}
-          onPointerCancel={() => setIsIgniting(false)}
-          onLostPointerCapture={() => setIsIgniting(false)}
-          disabled={fuel <= 0}
-          className={`w-full touch-none select-none rounded-xl px-5 py-4 text-sm font-bold tracking-widest transition-all disabled:cursor-not-allowed disabled:opacity-40 ${
-            isIgniting
-              ? "bg-orange-500 text-white"
-              : "bg-neutral-900 text-white"
-          }`}
+        <div
+          className="
+            flex h-20 w-13 items-start justify-center
+            rounded-full border border-neutral-400/70
+            p-2
+          "
         >
-          {isIgniting ? "IGNITING..." : "HOLD TO IGNITE"}
-        </button>
+          <div style={{ backgroundColor: color }} className="h-4 w-2 animate-bounce rounded-full" />
+        </div>
+      </div>
 
-        <p className="mt-4 text-center text-xs text-neutral-500">
-          Scroll down over the lighter to ignite
-        </p>
-      </aside>
+      <div
+        className="
+          pointer-events-none absolute bottom-0 right-0
+          hidden h-[35%] w-px bg-gradient-to-t
+          from-[#ff633e]/50 to-transparent md:block
+        "
+      />
     </main>
   );
 }

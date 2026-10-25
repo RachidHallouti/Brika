@@ -3,8 +3,8 @@
 
 import * as THREE from "three";
 import { JSX, useEffect, useMemo, useRef } from "react";
-import { useGLTF } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
+import { useGLTF,Billboard ,useScroll, useVideoTexture, Text} from "@react-three/drei";
+import { useFrame,useLoader } from "@react-three/fiber";
 import { GLTF } from "three-stdlib";
 import gsap from "gsap";
 import { useBrikaStore } from "../store/useBrikaStore";
@@ -40,13 +40,11 @@ type BrikaProps = Omit<
   JSX.IntrinsicElements["group"],
   "color"
 > & {
-  fuel?: number;
   color?: THREE.ColorRepresentation;
 };
 
 const MODEL_URL = "/models/brika_lp.glb";
 
-// Local coordinates before the model's scale={60}.
 const WHEEL_POSITION: [number, number, number] = [
   0, 0.044, 0.003
 ];
@@ -56,62 +54,41 @@ const BUTTON_POSITION: [number, number, number] = [
 ];
 
 const FLAME_POSITION: [number, number, number] = [
-  0, 0.057, -0.003
+  0, 0.055, -0.0075
 ];
 
 function Flame() {
   const flameRef = useRef<THREE.Group>(null);
-  const isIgniting = useBrikaStore((s) => s.isIgniting);
-
-  useFrame(({ clock }) => {
-    if (!flameRef.current || !isIgniting) return;
-
-    const t = clock.elapsedTime;
-
-    flameRef.current.scale.set(
-      1 + Math.sin(t * 21) * 0.07,
-      1 + Math.sin(t * 17) * 0.12,
-      1 + Math.sin(t * 19) * 0.07
-    );
+  const flameMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const scroll = useScroll();
+  const flameTexture = useVideoTexture(
+    "/textures/flame.webm"
+  );
+  useFrame(() => {
+    if(!flameMaterialRef.current) return;
+    flameMaterialRef.current.opacity = scroll.offset 
+    
   });
-
-  if (!isIgniting) return null;
-
   return (
     <group ref={flameRef} position={FLAME_POSITION}>
-      <mesh position={[0, 0.009, 0]}>
-        <coneGeometry args={[0.004, 0.022, 16]} />
-        <meshBasicMaterial
-          color="#ff9b19"
-          transparent
-          opacity={0.85}
-          depthWrite={false}
-        />
-      </mesh>
-
-      <mesh position={[0, 0.005, 0.0005]}>
-        <coneGeometry args={[0.002, 0.012, 12]} />
-        <meshBasicMaterial
-          color="#78baff"
-          transparent
-          opacity={0.9}
-          depthWrite={false}
-        />
-      </mesh>
-
-      <pointLight
-        position={[0, 0.014, 0]}
-        color="#ff9b32"
-        intensity={0.3}
-        distance={0.2}
-        decay={2}
-      />
+      <Billboard>
+        <mesh>
+          <planeGeometry args={[0.02, 0.02]} />
+          <meshBasicMaterial
+            ref = {flameMaterialRef}
+            opacity={0}
+            map={flameTexture}
+            alphaMap={flameTexture}
+            transparent
+            depthWrite={false}
+          />
+        </mesh>
+      </Billboard>
     </group>
   );
 }
 
 export function Brika({
-  fuel = 100,
   color = "#2563eb",
   ...props
 }: BrikaProps) {
@@ -121,16 +98,11 @@ export function Brika({
 
   const wheelRef = useRef<THREE.Group>(null);
   const buttonRef = useRef<THREE.Group>(null);
+  const gasRef = useRef<THREE.Group>(null);
+  const scroll = useScroll();
+  
 
-  const ignitionCount = useBrikaStore(
-    (s) => s.ignitionCount
-  );
-  const isIgniting = useBrikaStore(
-    (s) => s.isIgniting
-  );
-  const setIsIgniting = useBrikaStore(
-    (s) => s.setIsIgniting
-  );
+
 
   const fuelBounds = useMemo(() => {
     const geometry = nodes.gas_Baked.geometry;
@@ -144,14 +116,6 @@ export function Brika({
     return { bottom: bounds.min.y };
   }, [nodes.gas_Baked.geometry]);
 
-  const fuelScale = THREE.MathUtils.clamp(
-    fuel / 100,
-    0,
-    1
-  );
-
-  const fuelOffset =
-    fuelBounds.bottom * (1 - fuelScale);
 
   const caseMaterial = useMemo(() => {
     const material =
@@ -176,38 +140,35 @@ export function Brika({
     [color]
   );
 
-  // Spin the wheel once for every ignition event.
-  useEffect(() => {
-    if (ignitionCount === 0 || !wheelRef.current) {
-      return;
-    }
 
-    const tween = gsap.to(wheelRef.current.rotation, {
-      x: `+=${Math.PI * 1.5}`,
-      duration: 0.35,
-      ease: "power2.out",
-      overwrite: true,
-    });
+useFrame(() => {
+  const progress = scroll.offset;
 
-    return () => tween.kill();
-  }, [ignitionCount]);
+  if (wheelRef.current) {
+    wheelRef.current.rotation.x =
+      progress * Math.PI * 50;
+  }
 
-  // Press the button while ignition is active.
-  useEffect(() => {
-    if (!buttonRef.current) return;
+  if (buttonRef.current) {
+    buttonRef.current.position.y =
+      BUTTON_POSITION[1] - progress * 0.0005;
+  }
 
-    const tween = gsap.to(buttonRef.current.position, {
-      y: isIgniting
-        ? BUTTON_POSITION[1] - 0.002
-        : BUTTON_POSITION[1],
-      duration: 0.12,
-      ease: "power2.out",
-      overwrite: true,
-    });
+   if (gasRef.current) {
+    const level = THREE.MathUtils.clamp(
+      1 - progress * 0.8,
+      0,
+      1
+    );
 
-    return () => tween.kill();
-  }, [isIgniting]);
+    gasRef.current.scale.y = level;
 
+    gasRef.current.position.y =
+      fuelBounds.bottom * (1 - level);
+  }
+});
+
+  
   return (
     <group {...props} dispose={null}>
       <mesh
@@ -226,16 +187,15 @@ export function Brika({
         />
       </group>
 
-      {fuelScale > 0 && (
+      
         <group position={[0, -0.007, 0]}>
           <mesh
+          ref={gasRef}
             geometry={nodes.gas_Baked.geometry}
             material={materials.gas_Baked}
-            scale={[1, fuelScale, 1]}
-            position={[0, fuelOffset, 0]}
           />
         </group>
-      )}
+      
 
       <mesh
         geometry={nodes.metal_Baked.geometry}
@@ -282,32 +242,9 @@ export function Brika({
         />
       </group>
 
-      <Flame />
-
-      {/* Invisible interaction mesh around the lighter */}
-      <mesh
-        position={[0, 0.025, 0]}
-        onPointerDown={(e) => {
-          e.stopPropagation();
-          if (fuelScale <= 0) return;
-
-          e.target.setPointerCapture(e.pointerId);
-          useBrikaStore.getState().triggerIgnition();
-        }}
-        onPointerUp={(e) => {
-          e.stopPropagation();
-          setIsIgniting(false);
-        }}
-        onPointerCancel={() => setIsIgniting(false)}
-        onLostPointerCapture={() => setIsIgniting(false)}
-      >
-        <boxGeometry args={[0.03, 0.1, 0.025]} />
-        <meshBasicMaterial
-          transparent
-          opacity={0}
-          depthWrite={false}
-        />
-      </mesh>
+      <Flame  />
+      
+    
     </group>
   );
 }

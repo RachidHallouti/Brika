@@ -4,6 +4,7 @@
 import {
   Environment,
   OrbitControls,
+  ScrollControls,
   Lightformer,
   Float,
 } from "@react-three/drei";
@@ -13,10 +14,14 @@ import { useBrikaStore } from "../store/useBrikaStore";
 
 export default function Experience() {
   const color = useBrikaStore((state) => state.color);
-  const fuel = useBrikaStore((state) => state.fuelLevel);
 
   return (
-    <>
+    
+    <ScrollControls
+        pages={3}
+        damping={1}
+        horizontal={false}
+      >
       <OrbitControls
         makeDefault
         enableDamping
@@ -28,22 +33,18 @@ export default function Experience() {
         target={[0, 0, 0]}
       />
 
-      {/* Soft fill */}
       <ambientLight intensity={0.3} />
 
-      {/* Key light */}
       <directionalLight
         position={[4, 6, 5]}
         intensity={3}
       />
 
-      {/* Fill light */}
       <directionalLight
         position={[-4, 2, -3]}
         intensity={1}
       />
 
-      {/* Studio environment */}
       <Environment resolution={256}>
         <Lightformer
           form="rect"
@@ -67,7 +68,6 @@ export default function Experience() {
         />
       </Environment>
 
-      {/* Floating lighter */}
       <Float
         
       >
@@ -76,9 +76,9 @@ export default function Experience() {
           rotation-y={-Math.PI / 2}
           position-y={-0.5}
           color={color}
-          fuel={fuel}
         />
       </Float>
-    </>
+      </ScrollControls>
+    
   );
 }
