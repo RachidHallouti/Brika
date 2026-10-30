@@ -27,7 +27,7 @@ const ACCENTCOLORS = [
 
 const BrikaScene = memo(function BrikaScene() {
   const isMobile = useMediaQuery({maxWidth: 1024});
-
+  
   return (
     <div className="absolute inset-0 z-0">
       <Canvas

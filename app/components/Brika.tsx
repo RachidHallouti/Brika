@@ -2,10 +2,17 @@
 "use client";
 
 import * as THREE from "three";
-import { JSX, useEffect, useMemo, useRef } from "react";
-import { useGLTF,Billboard ,useScroll, useVideoTexture} from "@react-three/drei";
+import { JSX, useEffect, useMemo, useRef, type RefObject } from "react";
+import { gsap } from "gsap";
+import {
+  useGLTF,
+  Billboard,
+  useScroll,
+  useVideoTexture,
+} from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { GLTF } from "three-stdlib";
+import { motion } from "motion/three";
 
 type GLTFResult = GLTF & {
   nodes: {
@@ -34,53 +41,35 @@ type GLTFResult = GLTF & {
   };
 };
 
-type BrikaProps = Omit<
-  JSX.IntrinsicElements["group"],
-  "color"
-> & {
+type BrikaProps = Omit<JSX.IntrinsicElements["group"], "color"> & {
   color?: THREE.ColorRepresentation;
-} & {
   accentColor?: THREE.ColorRepresentation;
-
-}
+};
 
 const MODEL_URL = "/models/brika_lp.glb";
 
-const WHEEL_POSITION: [number, number, number] = [
-  0, 0.044, 0.003
-];
+const WHEEL_POSITION: [number, number, number] = [0, 0.044, 0.003];
+const BUTTON_POSITION: [number, number, number] = [0, 0.038, 0.007];
+const FLAME_POSITION: [number, number, number] = [0, 0.055, -0.0075];
 
-const BUTTON_POSITION: [number, number, number] = [
-  0, 0.038, 0.007
-];
+function Flame({
+  materialRef,
+}: {
+  materialRef: RefObject<THREE.MeshBasicMaterial | null>;
+}) {
+  const flameTexture = useVideoTexture("/textures/flame.webm");
 
-const FLAME_POSITION: [number, number, number] = [
-  0, 0.055, -0.0075
-];
-
-function Flame() {
-  const flameRef = useRef<THREE.Group>(null);
-  const flameMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
-  const scroll = useScroll();
-  const flameTexture = useVideoTexture(
-    "/textures/flame.webm"
-  );
-  useFrame(() => {
-    if(!flameMaterialRef.current) return;
-    flameMaterialRef.current.opacity = scroll.offset 
-    
-  });
   return (
-    <group ref={flameRef} position={FLAME_POSITION}>
+    <group position={FLAME_POSITION}>
       <Billboard>
         <mesh>
           <planeGeometry args={[0.02, 0.02]} />
           <meshBasicMaterial
-            ref = {flameMaterialRef}
-            opacity={0}
+            ref={materialRef}
             map={flameTexture}
             alphaMap={flameTexture}
             transparent
+            opacity={0}
             depthWrite={false}
           />
         </mesh>
@@ -94,17 +83,16 @@ export function Brika({
   accentColor = "#000",
   ...props
 }: BrikaProps) {
-  const { nodes, materials } = useGLTF(
-    MODEL_URL
-  ) as unknown as GLTFResult;
+  const { nodes, materials } = useGLTF(MODEL_URL) as unknown as GLTFResult;
+
+  const scroll = useScroll();
 
   const wheelRef = useRef<THREE.Group>(null);
   const buttonRef = useRef<THREE.Group>(null);
-  const gasRef = useRef<THREE.Group>(null);
-  const scroll = useScroll();
-  
+  const gasRef = useRef<THREE.Mesh>(null);
+  const flameMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
 
-
+  const timelineRef = useRef<gsap.core.Timeline | null>(null);
 
   const fuelBounds = useMemo(() => {
     const geometry = nodes.gas_Baked.geometry;
@@ -113,15 +101,14 @@ export function Brika({
       geometry.computeBoundingBox();
     }
 
-    const bounds = geometry.boundingBox!;
-
-    return { bottom: bounds.min.y };
+    return {
+      bottom: geometry.boundingBox!.min.y,
+    };
   }, [nodes.gas_Baked.geometry]);
 
-
+  // Custom case material
   const caseMaterial = useMemo(() => {
-    const material =
-      materials["case_Baked.001"].clone();
+    const material = materials["case_Baked.001"].clone();
 
     material.roughness = 0.7;
     material.thickness = 0.005;
@@ -133,44 +120,98 @@ export function Brika({
     return material;
   }, [materials]);
 
+  const caseColor = useMemo(() => new THREE.Color(color), [color]);
+
   useEffect(() => {
     return () => caseMaterial.dispose();
   }, [caseMaterial]);
 
-  const caseColor = useMemo(
-    () => new THREE.Color(color),
-    [color]
-  );
+  useEffect(() => {
+    const wheel = wheelRef.current;
+    const button = buttonRef.current;
+    const gas = gasRef.current;
+    const flame = flameMaterialRef.current;
 
+    if (!wheel || !button || !gas || !flame) return;
 
-useFrame(() => {
-  const progress = scroll.offset;
+    // Initial states
+    gsap.set(wheel.rotation, { x: 0 });
+    gsap.set(button.position, { y: BUTTON_POSITION[1] });
+    gsap.set(gas.scale, { y: 1 });
+    gsap.set(gas.position, { y: 0 });
+    gsap.set(flame, { opacity: 0 });
 
-  if (wheelRef.current) {
-    wheelRef.current.rotation.x =
-      progress * Math.PI * 50;
-  }
+    const timeline = gsap.timeline({
+      paused: true,
+    });
 
-  if (buttonRef.current) {
-    buttonRef.current.position.y =
-      BUTTON_POSITION[1] - progress * 0.0005;
-  }
-
-   if (gasRef.current) {
-    const level = THREE.MathUtils.clamp(
-      1 - progress * 0.8,
-      0,
-      1
+    // 1. Wheel rotation
+    timeline.to(
+      wheel.rotation,
+      {
+        x: Math.PI * 50,
+        duration: 1,
+        ease: "none",
+      },
+      0
     );
 
-    gasRef.current.scale.y = level;
+    // 2. Button movement
+    timeline.to(
+      button.position,
+      {
+        y: BUTTON_POSITION[1] - 0.0005,
+        duration: 0.2,
+        ease: "power1.inOut",
+      },
+      0.15
+    );
 
-    gasRef.current.position.y =
-      fuelBounds.bottom * (1 - level);
-  }
-});
+    // 3. Fuel consumption
+    timeline.to(
+      gas.scale,
+      {
+        y: 0.2,
+        duration: 0.7,
+        ease: "none",
+      },
+      0.2
+    );
 
-  
+    timeline.to(
+      gas.position,
+      {
+        y: fuelBounds.bottom * 0.8,
+        duration: 0.7,
+        ease: "none",
+      },
+      0.2
+    );
+
+    // 4. Flame appearance
+    timeline.to(
+      flame,
+      {
+        opacity: 1,
+        duration: 0.3,
+        ease: "power1.in",
+      },
+      0.45
+    );
+
+    timelineRef.current = timeline;
+
+    return () => {
+      timeline.kill();
+      timelineRef.current = null;
+    };
+  }, [fuelBounds]);
+
+  // Synchronize GSAP with Drei scroll progress
+  useFrame(() => {
+    timelineRef.current?.progress(scroll.offset);
+  });
+
   return (
     <group {...props} dispose={null}>
       <mesh
@@ -179,26 +220,20 @@ useFrame(() => {
         material-color={caseColor}
       />
 
-      <group
-        ref={buttonRef}
-        position={BUTTON_POSITION}
-      >
+      <motion.group ref={buttonRef} position={BUTTON_POSITION}>
         <mesh
           geometry={nodes.button_Baked.geometry}
           material={materials.button_Baked}
           material-color={accentColor}
         />
-      </group>
+      </motion.group>
 
-      
-        <group position={[0, -0.007, 0]}>
-          <mesh
-          ref={gasRef}
-            geometry={nodes.gas_Baked.geometry}
-            material={materials.gas_Baked}
-          />
-        </group>
-      
+      <mesh
+        ref={gasRef}
+        geometry={nodes.gas_Baked.geometry}
+        material={materials.gas_Baked}
+        position={[0, -0.007, 0]}
+      />
 
       <mesh
         geometry={nodes.metal_Baked.geometry}
@@ -209,16 +244,14 @@ useFrame(() => {
       <mesh
         geometry={nodes.pac_Baked.geometry}
         material={materials.pac_Baked}
-          material-color={accentColor}
-
+        material-color={accentColor}
         position={[0, 0.036, -0.013]}
       />
 
       <mesh
         geometry={nodes.plastic_top_Baked.geometry}
         material={materials["plastic top_Baked"]}
-          material-color={accentColor}
-
+        material-color={accentColor}
         position={[0, 0.03, 0]}
       />
 
@@ -234,10 +267,7 @@ useFrame(() => {
         position={[0, -0.005, -0.006]}
       />
 
-      <group
-        ref={wheelRef}
-        position={WHEEL_POSITION}
-      >
+      <group ref={wheelRef} position={WHEEL_POSITION}>
         <mesh
           geometry={nodes.wheel001_Baked.geometry}
           material={materials["wheel.001_Baked"]}
@@ -249,9 +279,7 @@ useFrame(() => {
         />
       </group>
 
-      <Flame  />
-      
-    
+      <Flame materialRef={flameMaterialRef} />
     </group>
   );
 }
