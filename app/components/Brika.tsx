@@ -9,10 +9,11 @@ import {
   Billboard,
   useScroll,
   useVideoTexture,
+  PresentationControls,
 } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { GLTF } from "three-stdlib";
-import { motion } from "motion/three";
+import { motion as m } from "r3f-motion";
 
 type GLTFResult = GLTF & {
   nodes: {
@@ -48,7 +49,7 @@ type BrikaProps = Omit<JSX.IntrinsicElements["group"], "color"> & {
 
 const MODEL_URL = "/models/brika_lp.glb";
 
-const WHEEL_POSITION: [number, number, number] = [0, 0.044, 0.003];
+const WHEEL_POSITION: [number, number, number] = [-0.0004, 0.044, 0.003];
 const BUTTON_POSITION: [number, number, number] = [0, 0.038, 0.007];
 const FLAME_POSITION: [number, number, number] = [0, 0.055, -0.0075];
 
@@ -149,7 +150,7 @@ export function Brika({
     timeline.to(
       wheel.rotation,
       {
-        x: Math.PI * 50,
+        x: `+=${Math.PI * 50}`,
         duration: 1,
         ease: "none",
       },
@@ -220,13 +221,23 @@ export function Brika({
         material-color={caseColor}
       />
 
-      <motion.group ref={buttonRef} position={BUTTON_POSITION}>
-        <mesh
-          geometry={nodes.button_Baked.geometry}
-          material={materials.button_Baked}
-          material-color={accentColor}
-        />
-      </motion.group>
+      <m.group
+  ref={buttonRef}
+  position={BUTTON_POSITION}
+  
+>
+  <m.mesh
+  whileHover={{ scale: 1.04 }}
+  whileTap={{ 
+    y:-0.001,
+  }}
+  onPointerOver={() => (document.body.style.cursor = "pointer")}
+  onPointerOut={() => (document.body.style.cursor = "auto")}
+    geometry={nodes.button_Baked.geometry}
+    material={materials.button_Baked}
+    material-color={accentColor}
+  />
+</m.group>
 
       <mesh
         ref={gasRef}
@@ -267,17 +278,36 @@ export function Brika({
         position={[0, -0.005, -0.006]}
       />
 
-      <group ref={wheelRef} position={WHEEL_POSITION}>
-        <mesh
-          geometry={nodes.wheel001_Baked.geometry}
-          material={materials["wheel.001_Baked"]}
-        />
+     
+  <m.group
+  whileHover={{ scale: 1.02 }}
+  ref={wheelRef}
+  onPointerOver={() => (document.body.style.cursor = "pointer")}
+  onPointerOut={() => (document.body.style.cursor = "auto")}
+  onClick={() => {
+    if (!wheelRef.current) return;
 
-        <mesh
-          geometry={nodes.wheel_Baked.geometry}
-          material={materials["wheel_Baked.1001"]}
-        />
-      </group>
+    gsap.to(wheelRef.current.rotation, {
+      x: `+=${5}`,
+      duration: 1,
+      ease: "power2.out",
+      overwrite: "auto",
+    });
+  }}
+  position={WHEEL_POSITION}
+>
+  <mesh
+    geometry={nodes.wheel001_Baked.geometry}
+    material={materials["wheel.001_Baked"]}
+  />
+
+  <mesh
+    geometry={nodes.wheel_Baked.geometry}
+    material={materials["wheel_Baked.1001"]}
+  />
+</m.group>
+
+      
 
       <Flame materialRef={flameMaterialRef} />
     </group>
